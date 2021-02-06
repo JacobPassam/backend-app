@@ -1,15 +1,16 @@
 package db
 
 import (
+	"backend-app/config"
 	"context"
 	"fmt"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"strconv"
 	"time"
 )
 
 const (
-	Database string = "backenddb"
 	UsersCollection string = "users"
 	PostsCollection string = "posts"
 )
@@ -20,16 +21,19 @@ type MongoHandler struct {
 
 func NewMongoHandler() MongoHandler {
 
-	host := "localhost:27017"
-	username := "admin1"
-	password := "123"
+	cfg := config.Get()
+	host := cfg.Mongo.Host
+	port := cfg.Mongo.Port
+	username := cfg.Mongo.Username
+	password := cfg.Mongo.Password
+	database := cfg.Mongo.Database
 
 	mongoOptions := options.Client()
 
-	mongoOptions.SetAuth(options.Credential{Username: username, Password: password})
-	mongoOptions.ApplyURI("mongodb://" + host)
+	mongoOptions.SetAuth(options.Credential{Username: username, Password: password, AuthSource: database})
+	mongoOptions.ApplyURI("mongodb://" + host + ":" + strconv.Itoa(port))
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second * 10)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
 	client, err := mongo.Connect(ctx, mongoOptions)
@@ -43,9 +47,13 @@ func NewMongoHandler() MongoHandler {
 
 }
 
-func (mongo *MongoHandler) Disconnect() {
+func (mongo *MongoHandler) Disconnect() error {
 	ctx := context.Background()
 
-	mongo.Client.Disconnect(ctx)
+	if err := mongo.Client.Disconnect(ctx); err != nil {
+		return err
+	}
+
 	fmt.Println("Disconnected from MongoDB")
+	return nil
 }
