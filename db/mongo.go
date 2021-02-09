@@ -15,11 +15,13 @@ const (
 	PostsCollection string = "posts"
 )
 
+var handler *MongoHandler
+
 type MongoHandler struct {
 	Client *mongo.Client
 }
 
-func NewMongoHandler() MongoHandler {
+func NewMongoHandler() {
 
 	cfg := config.Get()
 	host := cfg.Mongo.Host
@@ -43,17 +45,26 @@ func NewMongoHandler() MongoHandler {
 	}
 
 	fmt.Println("Successfully connected to MongoDB")
-	return MongoHandler{Client: client}
 
+	handler = &MongoHandler{Client: client}
 }
 
-func (mongo *MongoHandler) Disconnect() error {
+func Disconnect() error {
 	ctx := context.Background()
 
-	if err := mongo.Client.Disconnect(ctx); err != nil {
+	if err := handler.Client.Disconnect(ctx); err != nil {
 		return err
 	}
 
 	fmt.Println("Disconnected from MongoDB")
 	return nil
+}
+
+func Get() *MongoHandler {
+	return handler
+}
+
+func GetCollection(name string) *mongo.Collection {
+	cfg := config.Get()
+	return handler.Client.Database(cfg.Mongo.Database).Collection(name)
 }

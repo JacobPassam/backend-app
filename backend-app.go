@@ -3,6 +3,7 @@ package main
 import (
 	"backend-app/config"
 	"backend-app/db"
+	"backend-app/http"
 	"fmt"
 )
 
@@ -11,9 +12,8 @@ func main() {
 		fmt.Println(err)
 	}
 
-	var mongo = db.NewMongoHandler()
+	db.NewMongoHandler()
+	http.Run()
 
-	if err := mongo.Disconnect(); err != nil {
-		fmt.Println(err)
-	}
+	defer db.Disconnect()
 }
