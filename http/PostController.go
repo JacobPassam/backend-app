@@ -5,36 +5,44 @@ import (
 	"backend-app/model"
 	"context"
 	"encoding/json"
+	"go.mongodb.org/mongo-driver/bson"
 	"net/http"
 )
 
+// Get all posts
 func GetPosts(w http.ResponseWriter, r *http.Request) {
-	collection := db.GetCollection(db.PostsCollection)
 
-	var data interface{}
-	data = json.NewDecoder(r.Body).Decode(&data)
+	collection := db.GetCollection(db.PostsCollection)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	cursor, err := collection.Find(ctx, data)
+	var empty interface{} = bson.M{}
 
+	cursor, err := collection.Find(ctx, empty)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		WriteInternalServerError(w, err)
 		return
 	}
 
-	results := make([]model.Post, 0)
-
+	var results = make([]model.Post, 0)
 	for cursor.TryNext(ctx) {
-		post := model.Post{}
-		cursor.Decode(&post)
+		var post model.Post
+
+		if err := cursor.Decode(&post); err != nil {
+			WriteInternalServerError(w, err)
+			return
+		}
 
 		results = append(results, post)
 		cursor.Next(ctx)
 	}
 
-	enc, _ := json.Marshal(results)
-	w.Write(enc)
+	b, err := json.Marshal(results)
 
+	if err != nil {
+		WriteInternalServerError(w, err)
+	} else {
+		_, _ = w.Write(b)
+	}
 }
